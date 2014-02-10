@@ -4,7 +4,6 @@
 
         29/04/2009 Preliminary driver.
 
-        TODO: keyboard doesn't work properly, kb uart comms issue?
         TODO: split keyboard off as a synchronous serial device?
         TODO: vt100 gives a '2' error on startup indicating bad nvram checksum
               adding the serial nvram support should fix this
@@ -59,15 +58,17 @@ public:
 	bool m_keyboard_int;
 	bool m_receiver_int;
 	bool m_vertical_int;
-	bool m_key_scan;
 	UINT8 m_key_code;
 	virtual void machine_start();
 	virtual void machine_reset();
+
+	UINT8 scan_key_row(int i);
+	UINT8 next_key();
+	void signal_keyboard_intr();
+
 	UINT32 screen_update_vt100(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	INTERRUPT_GEN_MEMBER(vt100_vertical_interrupt);
-	TIMER_DEVICE_CALLBACK_MEMBER(keyboard_callback);
 	IRQ_CALLBACK_MEMBER(vt100_irq_callback);
-	UINT8 bit_sel(UINT8 data);
 };
 
 
@@ -112,40 +113,53 @@ READ8_MEMBER( vt100_state::vt100_flags_r )
 	return ret;
 }
 
-UINT8 vt100_state::bit_sel(UINT8 data)
+// The keyboard reads bytes from the terminal (the vt100_keyboard_w skips the
+// step where the data actually gets serialized and sent over to the keyboard
+// hardware), and when it gets a byte with the "scan start" bit set, it starts
+// scanning. It'll then respond with each key that is pressed. After scanning
+// all keys or if no keys are pressed it'll get to Line F which has a hardcoded
+// keypress, this results in the code 0x7f (the code is col << 4 | row).
+//
+// I think the way it's supposed to work is that
+// 1. the terminal asks for start scan
+// 2. the keyboard scans through the keyboard, sending *one byte for each
+// pressed key*. The scanning counter is paused whenever the UART's buffer is
+// full. (It's simply assumed here that the terminal will process these as
+// quickly as they come in over the UART? There's no flow control that I can
+// see mentioned in the manual.)
+// 3. after processing everything and receiving a 0x7f, the terminal finally
+// asks for another scan.
+UINT8 vt100_state::scan_key_row(int i)
 {
-	if (!BIT(data,7)) return 0x70;
-	if (!BIT(data,6)) return 0x60;
-	if (!BIT(data,5)) return 0x50;
-	if (!BIT(data,4)) return 0x40;
-	if (!BIT(data,3)) return 0x30;
-	if (!BIT(data,2)) return 0x20;
-	if (!BIT(data,1)) return 0x10;
-	if (!BIT(data,0)) return 0x00;
-	return 0;
+	char kbdrow[8];
+	assert(i < 16);
+	sprintf(kbdrow, "LINE%X", i);
+	return ioport(kbdrow)->read();
 }
 
-TIMER_DEVICE_CALLBACK_MEMBER(vt100_state::keyboard_callback)
+UINT8 vt100_state::next_key()
 {
-	UINT8 i, code;
-	char kbdrow[8];
-	if (m_key_scan)
-	{
-		for(i = 0; i < 16; i++)
-		{
-			sprintf(kbdrow,"LINE%X", i);
-			code =  ioport(kbdrow)->read();
-			if (code < 0xff)
-			{
-				m_keyboard_int = 1;
-				m_key_code = i | bit_sel(code);
-				m_maincpu->set_input_line(0, HOLD_LINE);
-				break;
-			}
+	for (; m_key_code < 0x80; m_key_code++) {
+		UINT8 code = scan_key_row(m_key_code & 0xf);
+		UINT8 col = m_key_code >> 4;
+		if (!BIT(code, col)) {
+			//printf("key %02x\n", m_key_scan_pos);
+			return m_key_code++;
 		}
 	}
+	return 0x7f;
 }
 
+// For more reals: delay this for however long it takes to scan to the first
+// pressed key, transmit it from keyboard to terminal uart, and for the
+// terminal uart to signal its interrupt stuff.
+// Basically this triggers the firmware to poll vt100_keyboard_r, which causes
+// us to update the keyboard simulation.
+void vt100_state::signal_keyboard_intr()
+{
+	m_keyboard_int = 1;
+	m_maincpu->set_input_line(0, HOLD_LINE);
+}
 
 WRITE8_MEMBER( vt100_state::vt100_keyboard_w )
 {
@@ -157,13 +171,24 @@ WRITE8_MEMBER( vt100_state::vt100_keyboard_w )
 	output_set_value("l2_led", BIT(data, 2) ? 0 : 1);
 	output_set_value("l3_led", BIT(data, 1) ? 0 : 1);
 	output_set_value("l4_led", BIT(data, 0) ? 0 : 1);
-	m_key_scan = BIT(data, 6);
 	m_speaker->set_state(BIT(data, 7));
+
+	if (BIT(data, 6))
+	{
+		m_key_code = 0;
+		signal_keyboard_intr();
+	}
 }
 
 READ8_MEMBER( vt100_state::vt100_keyboard_r )
 {
-	return m_key_code;
+	UINT8 code = next_key();
+	// Keep scanning to get all the keypresses.
+	if (code != 0x7f)
+	{
+		signal_keyboard_intr();
+	}
+	return code;
 }
 
 WRITE8_MEMBER( vt100_state::vt100_baud_rate_w )
@@ -359,8 +384,6 @@ void vt100_state::machine_reset()
 	output_set_value("l3_led", 1);
 	output_set_value("l4_led", 1);
 
-	m_key_scan = 0;
-
 	m_maincpu->set_irq_acknowledge_callback(device_irq_acknowledge_delegate(FUNC(vt100_state::vt100_irq_callback),this));
 }
 
@@ -454,7 +477,6 @@ static MACHINE_CONFIG_START( vt100, vt100_state )
 	MCFG_SOUND_ADD("beeper", BEEP, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MCFG_TIMER_DRIVER_ADD_PERIODIC("keyboard_timer", vt100_state, keyboard_callback, attotime::from_hz(800))
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( vt180, vt100 )
