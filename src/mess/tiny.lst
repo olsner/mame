@@ -38,6 +38,18 @@
 
 ******************************************************************************/
 
-coleco      // ColecoVision (Original BIOS)
-colecoa     // ColecoVision (Thick Characters)
-colecob     // Spectravideo SVI-603 Coleco Game Adapter
+vt100 // 1978 Digital Equipment Corporation
+//vt100wp // 1978 Digital Equipment Corporation
+//vt100stp // 1978 Digital Equipment Corporation
+//vt101 // 1981 Digital Equipment Corporation
+vt102 // 1981 Digital Equipment Corporation
+//vt103 // 1979 Digital Equipment Corporation
+vt105 // 1978 Digital Equipment Corporation
+//vt110 // 1978 Digital Equipment Corporation
+//vt125 // 1981 Digital Equipment Corporation
+vt131 // 1981 Digital Equipment Corporation
+//vt132 // 1978 Digital Equipment Corporation
+vt180 // 1981 Digital Equipment Corporation
+vt220 // 1983 Digital Equipment Corporation
+vt320 // 1987 Digital Equipment Corporation
+vt520 // 1994 Digital Equipment Corporation

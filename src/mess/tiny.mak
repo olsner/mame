@@ -22,30 +22,29 @@ include $(SRC)/mess/messcore.mak
 #-------------------------------------------------
 
 CPUS += Z80
-
-
+CPUS += I8085
+CPUS += MCS51
 
 #-------------------------------------------------
 # Specify all the sound cores necessary for the
 # drivers referenced in tiny.c.
 #-------------------------------------------------
 
-SOUNDS += SN76496
-
-
+SOUNDS += SPEAKER
+SOUNDS += BEEP
 
 #-------------------------------------------------
 # specify available video cores
 #-------------------------------------------------
 
-VIDEOS += TMS9928A
-
+VIDEOS += UPD7220
 
 #-------------------------------------------------
 # specify available machine cores
 #-------------------------------------------------
 
-
+MACHINES += I8251
+MACHINES += COM8116
 
 #-------------------------------------------------
 # This is the list of files that are necessary
@@ -54,6 +53,15 @@ VIDEOS += TMS9928A
 #-------------------------------------------------
 
 DRVLIBS = \
-	$(MESS_DRIVERS)/coleco.o \
-	$(MESS_MACHINE)/coleco.o \
+	$(MESS_DRIVERS)/vt100.o     \
+	$(MESS_DRIVERS)/vt220.o     \
+	$(MESS_DRIVERS)/vt240.o     \
+	$(MESS_DRIVERS)/vt320.o     \
+	$(MESS_DRIVERS)/vt520.o     \
+	$(MESS_VIDEO)/vtvideo.o     \
+	$(MESS_MACHINE)/serial.o    \
+	$(MESS_MACHINE)/terminal.o  \
+	$(MESS_MACHINE)/null_modem.o\
+	$(MESS_MACHINE)/keyboard.o  \
 
+$(MESS_DRIVERS)/vt100.o:    $(MESS_LAYOUT)/vt100.lh
