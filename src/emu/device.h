@@ -385,7 +385,7 @@ public:
 		}
 
 		// search next for neighbors up the ownership chain
-		while (m_curdepth > 0)
+		while (start != NULL && m_curdepth > 0)
 		{
 			// found a neighbor? great!
 			m_current = start->next();
