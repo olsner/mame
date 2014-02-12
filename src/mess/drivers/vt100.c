@@ -66,6 +66,10 @@ public:
 	UINT8 next_key();
 	void signal_keyboard_intr();
 
+	DECLARE_WRITE_LINE_MEMBER(serial_rxrdy);
+	DECLARE_WRITE_LINE_MEMBER(serial_txrdy);
+	bool m_tx_ready;
+
 	UINT32 screen_update_vt100(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	INTERRUPT_GEN_MEMBER(vt100_vertical_interrupt);
 	IRQ_CALLBACK_MEMBER(vt100_irq_callback);
@@ -108,6 +112,7 @@ ADDRESS_MAP_END
 READ8_MEMBER( vt100_state::vt100_flags_r )
 {
 	UINT8 ret = 0;
+	ret |= m_tx_ready ? 0 : 1;
 	ret |= m_crtc->lba7_r(space, 0) << 6;
 	ret |= m_keyboard_int << 7;
 	return ret;
@@ -361,8 +366,7 @@ UINT32 vt100_state::screen_update_vt100(screen_device &screen, bitmap_ind16 &bit
 //          all other set to 1
 IRQ_CALLBACK_MEMBER(vt100_state::vt100_irq_callback)
 {
-	UINT8 ret = 0xc7 | (m_keyboard_int << 3) | (m_receiver_int << 4) | (m_vertical_int << 5);
-	m_receiver_int = 0;
+	UINT8 ret = 0xc7 | (m_keyboard_int << 3) | ((m_receiver_int || m_tx_ready) << 4) | (m_vertical_int << 5);
 	return ret;
 }
 
@@ -375,6 +379,7 @@ void vt100_state::machine_reset()
 	m_keyboard_int = 0;
 	m_receiver_int = 0;
 	m_vertical_int = 0;
+	m_tx_ready = 0;
 	m_speaker->set_frequency(786); // 7.945us per serial clock = ~125865.324hz, / 160 clocks per char = ~ 786 hz
 	output_set_value("online_led",1);
 	output_set_value("local_led", 0);
@@ -433,11 +438,30 @@ static const i8251_interface i8251_intf =
 	DEVCB_DEVICE_LINE_MEMBER(RS232_TAG, serial_port_device, tx),
 	DEVCB_DEVICE_LINE_MEMBER(RS232_TAG, rs232_port_device, dtr_w),
 	DEVCB_DEVICE_LINE_MEMBER(RS232_TAG, rs232_port_device, rts_w),
-	DEVCB_NULL, // out_rxrdy_cb
-	DEVCB_NULL, // out_txrdy_cb
+	DEVCB_DRIVER_LINE_MEMBER(vt100_state, serial_rxrdy),
+	DEVCB_DRIVER_LINE_MEMBER(vt100_state, serial_txrdy),
+	// TODO These probably need to be implemented too? Not sure if connected.
 	DEVCB_NULL, // out_txempty_cb
 	DEVCB_NULL // out_syndet_cb
 };
+
+WRITE_LINE_MEMBER( vt100_state::serial_txrdy )
+{
+	m_tx_ready = state;
+	if (m_tx_ready)
+	{
+		m_maincpu->set_input_line(0, HOLD_LINE);
+	}
+}
+
+WRITE_LINE_MEMBER( vt100_state::serial_rxrdy )
+{
+	m_receiver_int = state;
+	if (m_receiver_int)
+	{
+		m_maincpu->set_input_line(0, HOLD_LINE);
+	}
+}
 
 static MACHINE_CONFIG_START( vt100, vt100_state )
 	/* basic machine hardware */
