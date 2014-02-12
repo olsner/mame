@@ -257,32 +257,16 @@ void i8251_device::transmit_clock()
 
 void i8251_device::update_tx_ready()
 {
-	/* clear tx ready state */
-	int tx_ready;
-
 	/* tx ready output is set if:
 	    DB Buffer Empty &
 	    CTS is set &
 	    Transmit enable is 1
 	*/
 
-	tx_ready = 0;
-
-	/* transmit enable? */
-	if ((m_command & (1<<0))!=0)
-	{
-		/* other side has rts set (comes in as CTS at this side) */
-		if (m_input_state & CTS)
-		{
-			if (m_status & I8251_STATUS_TX_EMPTY)
-			{
-				/* enable transfer */
-				tx_ready = 1;
-			}
-		}
-	}
-
-	m_out_txrdy_func(tx_ready);
+	m_out_txrdy_func(
+		(m_command & (1<<0)) &&
+		(m_input_state & CTS) &&
+		(m_status & I8251_STATUS_TX_EMPTY));
 }
 
 
