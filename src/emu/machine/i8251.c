@@ -14,9 +14,9 @@
     MACROS
 ***************************************************************************/
 
-#define VERBOSE 0
+#define VERBOSE 1
 
-#define LOG(x)  do { if (VERBOSE) logerror x; } while (0)
+#define LOG(x)  do { if (VERBOSE) printf x; } while (0)
 
 /***************************************************************************
     GLOBAL VARIABLES
@@ -437,7 +437,7 @@ WRITE8_MEMBER(i8251_device::control_w)
 					break;
 
 				case 2:
-					stop_bits = STOP_BITS_1_5;
+					stop_bits = STOP_BITS_1;
 					LOG(("stop bit: 1.5 bits\n"));
 					break;
 
@@ -676,7 +676,7 @@ WRITE8_MEMBER(i8251_device::data_w)
 {
 	m_data = data;
 
-//	printf("i8251 transmit char: %02x\n",data);
+	printf("i8251 transmit char: %02x\n",data);
 
 	/* writing clears */
 	m_status &=~I8251_STATUS_TX_READY;
@@ -697,7 +697,7 @@ WRITE8_MEMBER(i8251_device::data_w)
 
 void i8251_device::receive_character(UINT8 ch)
 {
-//	printf("i8251 receive char: %02x\n",ch);
+	printf("i8251 receive char: %02x\n",ch);
 
 	m_data = ch;
 
@@ -719,7 +719,7 @@ void i8251_device::receive_character(UINT8 ch)
 
 READ8_MEMBER(i8251_device::data_r)
 {
-	//logerror("read data: %02x, STATUS=%02x\n",m_data,m_status);
+	LOG(("read data: %02x, STATUS=%02x\n",m_data,m_status));
 	/* reading clears */
 	m_status &= ~I8251_STATUS_RX_READY;
 

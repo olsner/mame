@@ -182,13 +182,13 @@ endif
 #-------------------------------------------------
 
 # uncomment next line to build a debug version
-# DEBUG = 1
+DEBUG = 1
 
 # uncomment next line to disable some debug-related hotspots/slowdowns (e.g. for profiling)
 # FASTDEBUG = 1
 
 # uncomment next line to include the internal profiler
-# PROFILER = 1
+PROFILER = 1
 
 # uncomment the force the universal DRC to always use the C backend
 # you may need to do this if your target architecture does not have
@@ -232,11 +232,11 @@ BUILD_JPEGLIB = 1
 BUILD_MIDILIB = 1
 
 # uncomment next line to include the symbols
-# SYMBOLS = 1
+SYMBOLS = 1
 
 # specify symbols level or leave commented to use the default
 # (default is SYMLEVEL = 2 normally; use 1 if you only need backtrace)
-# SYMLEVEL = 2
+SYMLEVEL = 2
 
 # uncomment next line to dump the symbols to a .sym file
 # DUMPSYM = 1

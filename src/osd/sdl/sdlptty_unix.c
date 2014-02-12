@@ -42,6 +42,7 @@ file_error sdl_open_ptty(const char *path, UINT32 openflags, osd_file **file, UI
 	int aslave;
 	char name[100];
 
+	printf("openpty %s...\n", path);
 	if (openpty(&master, &aslave, name, NULL, NULL) >= 0)
 	{
 		printf("Slave of device %s is %s\n", path, name );
@@ -68,6 +69,7 @@ file_error sdl_read_ptty(osd_file *file, void *buffer, UINT64 offset, UINT32 cou
 		return error_to_file_error(errno);
 	}
 
+	printf("sdl_read_ptty: %lu bytes\n", result);
 	if (actual != NULL )
 	{
 		*actual = result;
@@ -86,6 +88,7 @@ file_error sdl_write_ptty(osd_file *file, const void *buffer, UINT64 offset, UIN
 		return error_to_file_error(errno);
 	}
 
+	printf("sdl_write_ptty: %lu bytes\n", result);
 	if (actual != NULL )
 	{
 		*actual = result;
